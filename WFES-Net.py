@@ -16,13 +16,10 @@ class WeberFchnerLayer(nn.Module):
         self._init_parameters()
 
     def _init_parameters(self):
-        # Initialize alpha with a normal distribution (mean=0, std=0.1)
         torch.nn.init.uniform_(self.alpha, a=0.0001, b=0.001)
 
-        # Initialize beta with a uniform distribution between 0 and 1
         torch.nn.init.uniform_(self.beta, a=0.1, b=0.5)
 
-        # Initialize lambda_param with Xavier initialization
         torch.nn.init.uniform_(self.lambda_param, a=-1, b=1)
 
     def forward(self, x):
@@ -36,7 +33,6 @@ class WeberFchnerLayer(nn.Module):
 class BlockEmbedding(nn.Module):
     def __init__(self, in_channel, block_size, embed_dim, num_blockies, dropout):
         super(BlockEmbedding, self).__init__()
-        # 逐步分块至块大小为16
         self.Blocker = nn.Sequential(
             nn.Conv3d(in_channel, 8, kernel_size=3, stride=2, padding=1),
             nn.ReLU(inplace=True),
@@ -87,7 +83,7 @@ class PyramidPoolingModule(nn.Module):
 
 
 
-class WFE_Seg(nn.Module):
+class WFES_Net(nn.Module):
     def __init__(self, in_channel, img_size, block_size, embed_dim, num_blockies, dropout,
                  num_heads, activation, num_encoders, num_classes, target_depth, training=True):
         super(WFE_Seg, self).__init__()
@@ -135,9 +131,6 @@ class WFE_Seg(nn.Module):
 
     def forward(self, x):
 
-        x=x.cuda()
-
-        # 跳跃连接层
         skip_connection1 = self.block_embedding.Blocker[0](x)
         skip_connection2 = self.block_embedding.Blocker[2](F.relu(skip_connection1, inplace=True))
         skip_connection3 = self.block_embedding.Blocker[4](F.relu(skip_connection2, inplace=True))
@@ -146,9 +139,9 @@ class WFE_Seg(nn.Module):
 
         x = self.block_embedding(x)
 
-        # x = self.encoder_blocks(x)
+        x = self.encoder_blocks(x)
 
-        cls_token = x[:, 0, :].unsqueeze(1)  # 提取cls_token
+        cls_token = x[:, 0, :].unsqueeze(1)
         x = x[:, 1:, :]
 
         batch_size = x.shape[0]
@@ -164,11 +157,11 @@ class WFE_Seg(nn.Module):
 
         x = self.ppm(x)
 
-        x = F.relu(self.decoder2(torch.cat([x, skip_connection4], dim=1)), inplace=True)  # 跳跃连接 skip2
+        x = F.relu(self.decoder2(torch.cat([x, skip_connection4], dim=1)), inplace=True)
 
         output1 = self.map1(x)
 
-        x = F.relu(self.decoder3(torch.cat([x, skip_connection3], dim=1)), inplace=True)  # 跳跃连接 skip1
+        x = F.relu(self.decoder3(torch.cat([x, skip_connection3], dim=1)), inplace=True) 
 
         output2 = self.map2(x)
 
@@ -180,36 +173,3 @@ class WFE_Seg(nn.Module):
             return output1, output2, output3
         else:
             return output3
-
-
-if __name__ == "__main__":
-    # 设置参数
-    in_channel = 1           # 输入通道数
-    img_size = 512          # 输入图像大小（假设为立方体）
-    block_size = 16         # 块大小
-    embed_dim = 256         # 嵌入维度
-    num_blockies = 16384       # 块数量
-    dropout = 0.1           # dropout 概率
-    num_heads = 8           # 自注意力头数
-    activation = 'relu'     # 激活函数
-    num_encoders = 6        # 编码器层数
-    num_classes = 2         # 类别数
-    target_depth = 256      # 目标深度
-    training = True          # 是否在训练模式
-
-    # 创建模型实例
-    model = WFE_Seg(in_channel, img_size, block_size, embed_dim, num_blockies,
-                     dropout, num_heads, activation, num_encoders,
-                     num_classes, target_depth, training).cuda()
-
-    # 创建随机输入数据，形状为 (batch_size, in_channel, depth, height, width)
-    batch_size = 2           # 批次大小
-
-
-
-    x = torch.randn(batch_size, in_channel, target_depth, img_size, img_size).cuda()
-
-
-    # 前向传播
-    output = model(x)
-    print(output)
