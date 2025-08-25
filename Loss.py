@@ -4,7 +4,6 @@ import torch
 import numpy as np
 
 class LossAverage(object):
-    """Computes and stores the average and current value for calculate average loss"""
     def __init__(self):
         self.reset()
 
@@ -19,11 +18,9 @@ class LossAverage(object):
         self.sum += val * n
         self.count += n
         self.avg = round(self.sum / self.count, 4)
-        # print(self.val)
 
 
 class DiceAverage(object):
-    """Computes and stores the average and current value for calculate average loss"""
     def __init__(self,class_num):
         self.class_num = class_num
         self.reset()
@@ -39,7 +36,6 @@ class DiceAverage(object):
         self.sum += self.value
         self.count += 1
         self.avg = np.around(self.sum / self.count, 4)
-        # print(self.value)
 
     @staticmethod
     def get_dices(logits, targets):
@@ -53,7 +49,6 @@ class DiceAverage(object):
             union_logits = torch.sum(logits[:, class_index, :, :, :])
             union_targets = torch.sum(targets[:, class_index, :, :, :])
             union = union_logits + union_targets
-            # print(f"Class {class_index}: inter={inter.item()}, union_logits={union_logits.item()}, union_targets={union_targets.item()}, union={union.item()}")
             dice = (2. * inter + 1) / (union + 1)
             dices.append(dice.item())
         return np.asarray(dices)
@@ -78,18 +73,8 @@ class TverskyLoss(nn.Module):
         dice = dice / pred.size(1)
         return torch.clamp((1 - dice).mean(), 0, 2)
 
-class EdgeLoss(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.criterion = nn.BCEWithLogitsLoss()
-
-    def forward(self, edge_output, edge_targets):
-        loss = self.criterion(edge_output, edge_targets)
-        return loss
-
 
 class IoUAverage(object):
-    """Computes and stores the average and current value for IoU calculation."""
 
     def __init__(self, class_num):
         self.class_num = class_num
@@ -119,7 +104,8 @@ class IoUAverage(object):
             union_targets = torch.sum(targets[:, class_index, :, :, :])
             union = union_logits + union_targets - inter
 
-            iou = (inter + smooth) / (union + smooth)  # 添加平滑因子以避免除以零
+            iou = (inter + smooth) / (union + smooth) 
             ious.append(iou.item())
 
         return np.asarray(ious)
+
